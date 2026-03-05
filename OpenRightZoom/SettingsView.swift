@@ -68,14 +68,7 @@ struct SettingsView: View {
 
     private func checkAccessibility() {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
-        let trusted = AXIsProcessTrustedWithOptions(options)
-        if trusted != hasAccessibility {
-            hasAccessibility = trusted
-            // Restart maximizer if we just got access and are enabled
-            if trusted && settings.isEnabled {
-                // windowMaximizer reference is via settings
-            }
-        }
+        hasAccessibility = AXIsProcessTrustedWithOptions(options)
     }
 
     private func openAccessibilityPreferences() {

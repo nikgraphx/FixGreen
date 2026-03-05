@@ -67,84 +67,57 @@ class WindowMaximizer {
             return Unmanaged.passRetained(event)
         }
 
-        let flags = event.flags
-        let modifiers: CGEventFlags = [.maskShift, .maskControl, .maskCommand, .maskAlternate]
-
         if type == .leftMouseDown {
-            let clickPoint = CGPoint(x: event.location.x, y: event.location.y)
-            NSLog("[ORZ] mouseDown at \(clickPoint)")
-
-            if !flags.intersection(modifiers).isEmpty {
-                NSLog("[ORZ] modifier key held – passing through")
+            let modifiers: CGEventFlags = [.maskShift, .maskControl, .maskCommand, .maskAlternate]
+            guard event.flags.intersection(modifiers).isEmpty else {
                 cancelPending()
                 return Unmanaged.passRetained(event)
             }
 
-            // Step 1: find which app/PID owns the element at click position
+            let click = CGPoint(x: event.location.x, y: event.location.y)
+
             let system = AXUIElementCreateSystemWide()
             var axEl: AXUIElement?
-            let axResult = AXUIElementCopyElementAtPosition(system, Float(clickPoint.x), Float(clickPoint.y), &axEl)
-            guard axResult == .success, let el = axEl else {
-                NSLog("[ORZ] AX element not found (result=\(axResult.rawValue))")
+            guard AXUIElementCopyElementAtPosition(system, Float(click.x), Float(click.y), &axEl) == .success,
+                  let el = axEl else {
                 cancelPending()
                 return Unmanaged.passRetained(event)
             }
+
             var pid: pid_t = 0
             AXUIElementGetPid(el, &pid)
-            NSLog("[ORZ] AX element found pid=\(pid)")
-
-            // Step 2: get the window that contains this element
             let appElement = AXUIElementCreateApplication(pid)
+
             guard let window = focusedOrMainWindow(appElement) else {
-                NSLog("[ORZ] no focused/main window for pid=\(pid)")
                 cancelPending()
                 return Unmanaged.passRetained(event)
             }
-            NSLog("[ORZ] window found")
 
-            // Step 3: get zoom button directly from the window via kAXZoomButtonAttribute
             var zoomRef: CFTypeRef?
             guard AXUIElementCopyAttributeValue(window, kAXZoomButtonAttribute as CFString, &zoomRef) == .success,
-                  let zoomBtn = zoomRef else {
-                NSLog("[ORZ] no zoom button attribute on window")
-                cancelPending()
-                return Unmanaged.passRetained(event)
-            }
-            let zoomBtnEl = zoomBtn as! AXUIElement
-            NSLog("[ORZ] zoom button attribute found")
-
-            // Step 4: verify click hits the zoom button (with tolerance)
-            guard let btnFrame = getElementFrame(zoomBtnEl) else {
-                NSLog("[ORZ] zoom button frame unavailable")
-                cancelPending()
-                return Unmanaged.passRetained(event)
-            }
-            let hitFrame = btnFrame.insetBy(dx: -6, dy: -6)
-            NSLog("[ORZ] zoom button frame=\(btnFrame) click=\(clickPoint) hit=\(hitFrame.contains(clickPoint))")
-            guard hitFrame.contains(clickPoint) else {
+                  let zoomBtn = zoomRef,
+                  let btnFrame = getElementFrame(zoomBtn as! AXUIElement),
+                  btnFrame.insetBy(dx: -6, dy: -6).contains(click) else {
                 cancelPending()
                 return Unmanaged.passRetained(event)
             }
 
             guard let screen = screenForWindow(window) else {
-                NSLog("[ORZ] screen not found for window")
                 cancelPending()
                 return Unmanaged.passRetained(event)
             }
 
             let targetFrame = convertToAXCoordinates(screen.visibleFrame, screen: screen)
-            let currentFrame = getWindowFrame(window)
+            let currentFrame = getElementFrame(window)
             let key = windowKey(for: window)
 
             if isWindowMaximized(currentFrame, targetFrame: targetFrame), let saved = savedFrames[key] {
-                NSLog("[ORZ] Will restore to \(saved)")
                 pendingAction = { [weak self] in
                     self?.setWindowFrame(window, frame: saved)
                     self?.savedFrames.removeValue(forKey: key)
                 }
             } else {
                 if let frame = currentFrame { savedFrames[key] = frame }
-                NSLog("[ORZ] Will maximize to \(targetFrame)")
                 pendingAction = { [weak self] in
                     self?.setWindowFrame(window, frame: targetFrame)
                 }
@@ -152,18 +125,16 @@ class WindowMaximizer {
 
             pendingZoomWindow = window
 
-            // Fallback: if no space change occurs within 0.35s, fullscreen was blocked → apply directly
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
                 guard let self, self.pendingZoomWindow != nil else { return }
-                NSLog("[ORZ] No fullscreen detected – applying action directly")
                 self.executePendingAction()
             }
 
-            return nil // consume mouseDown
+            return nil
         }
 
         if type == .leftMouseUp, pendingZoomWindow != nil {
-            return nil // consume mouseUp
+            return nil
         }
 
         return Unmanaged.passRetained(event)
@@ -175,8 +146,7 @@ class WindowMaximizer {
         AXUIElementCopyAttributeValue(window, "AXFullScreen" as CFString, &fsRef)
         guard let isFS = fsRef as? Bool, isFS else { return }
 
-        NSLog("[ORZ] Fullscreen detected via space change – cancelling, will apply after exit animation")
-        pendingZoomWindow = nil  // prevent the 0.35s fallback from firing
+        pendingZoomWindow = nil
         AXUIElementSetAttributeValue(window, "AXFullScreen" as CFString, kCFBooleanFalse)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             self?.executePendingAction()
@@ -226,58 +196,35 @@ class WindowMaximizer {
     }
 
     private func screenForWindow(_ window: AXUIElement) -> NSScreen? {
-        guard let frame = getWindowFrame(window) else { return NSScreen.main }
+        guard let frame = getElementFrame(window) else { return NSScreen.main }
         guard let mainScreen = NSScreen.screens.first else { return NSScreen.main }
         let nsCenter = CGPoint(x: frame.midX, y: mainScreen.frame.height - frame.midY)
         for screen in NSScreen.screens where screen.frame.contains(nsCenter) { return screen }
         return NSScreen.main
     }
 
-    private func getWindowFrame(_ window: AXUIElement) -> CGRect? {
-        return getElementFrame(window)
-    }
-
     private func setWindowFrame(_ window: AXUIElement, frame: CGRect) {
-        // Get the application element to handle AXEnhancedUserInterface (Electron/Java apps)
         var pid: pid_t = 0
         AXUIElementGetPid(window, &pid)
         let appElement = AXUIElementCreateApplication(pid)
 
-        // Disable AXEnhancedUserInterface if set — it silently blocks position/size writes
         var enhancedUIRef: CFTypeRef?
         AXUIElementCopyAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, &enhancedUIRef)
         let hadEnhancedUI = (enhancedUIRef as? Bool) == true
         if hadEnhancedUI {
-            NSLog("[ORZ] Disabling AXEnhancedUserInterface")
             AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanFalse)
         }
 
         var pos = frame.origin
         var size = frame.size
 
-        // Rectangle's proven sequence: size → position → size
-        // (fixes multi-display clamping: macOS enforces sizes that fit the current display)
-        if let v = AXValueCreate(.cgSize, &size) {
-            let err = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, v)
-            NSLog("[ORZ] set size=\(size) err=\(err.rawValue)")
-        }
-        if let v = AXValueCreate(.cgPoint, &pos) {
-            let err = AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, v)
-            NSLog("[ORZ] set pos=\(pos) err=\(err.rawValue)")
-        }
-        if let v = AXValueCreate(.cgSize, &size) {
-            let err = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, v)
-            NSLog("[ORZ] set size(2nd)=\(size) err=\(err.rawValue)")
-        }
+        // size → position → size to handle multi-display clamping
+        if let v = AXValueCreate(.cgSize, &size) { AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, v) }
+        if let v = AXValueCreate(.cgPoint, &pos) { AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, v) }
+        if let v = AXValueCreate(.cgSize, &size) { AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, v) }
 
-        // Restore AXEnhancedUserInterface if we disabled it
         if hadEnhancedUI {
             AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
-        }
-
-        // Log actual result to detect silent failures
-        if let actual = getWindowFrame(window) {
-            NSLog("[ORZ] actual frame after set: \(actual)")
         }
     }
 
