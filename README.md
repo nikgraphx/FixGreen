@@ -16,7 +16,17 @@ A free, open-source clone of "Right Zoom for Mac". Click the green zoom button t
 - macOS 13 Ventura or later
 - Xcode 15+ (to build from source)
 
-## Build & Run
+## Installation
+
+1. Download `OpenRightZoom-vX.X.X.zip` from [Releases](../../releases)
+2. Unzip and move `OpenRightZoom.app` to `/Applications`
+3. First launch — macOS will block the app since it's not from the App Store. Run this once in Terminal:
+   ```bash
+   xattr -cr /Applications/OpenRightZoom.app
+   ```
+4. Open the app and grant Accessibility permission when prompted (Settings → Privacy & Security → Accessibility)
+
+## Build from source
 
 1. Open `OpenRightZoom.xcodeproj` in Xcode
 2. Press `Cmd+R` to build and run

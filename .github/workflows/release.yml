@@ -31,6 +31,10 @@ jobs:
           cp -r build/OpenRightZoom.xcarchive/Products/Applications/OpenRightZoom.app \
                 build/OpenRightZoom.app
 
+      - name: Ad-hoc sign
+        run: |
+          codesign --deep --force --sign - build/OpenRightZoom.app
+
       - name: Zip .app
         run: |
           cd build
