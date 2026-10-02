@@ -42,7 +42,7 @@ xcodebuild -project OpenRightZoom.xcodeproj \
 
 ## Publishing a release
 
-The GitHub Actions workflow builds and attaches a ZIP whenever a version tag such as `v1.1.0` is pushed:
+Before releasing, update `CFBundleShortVersionString` and `CFBundleVersion` in `OpenRightZoom/Info.plist`, then push a matching version tag such as `v1.1.0`. The GitHub Actions workflow builds and attaches a ZIP:
 
 ```sh
 git tag v1.1.0
