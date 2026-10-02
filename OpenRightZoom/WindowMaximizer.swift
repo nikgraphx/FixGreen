@@ -2,12 +2,22 @@ import AppKit
 import ApplicationServices
 
 class WindowMaximizer {
+    weak var settings: AppSettings?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var hotKeyMonitor: Any?
     private var savedFrames: [String: CGRect] = [:]
+    private var lastActiveApplication: NSRunningApplication?
     private var pendingZoomWindow: AXUIElement?
     private var pendingAction: (() -> Void)?
+    private var lastZoomedWindow: AXUIElement?
+    private var lastZoomedWindowKey: String?
     private(set) var isRunning = false
+
+    var canRestorePreviousSize: Bool {
+        guard let key = lastZoomedWindowKey else { return false }
+        return savedFrames[key] != nil
+    }
 
     func start() {
         guard !isRunning else { return }
@@ -33,6 +43,7 @@ class WindowMaximizer {
         )
 
         guard let tap = eventTap else { NSLog("[ORZ] tapCreate failed"); return }
+        registerZoomHotKeyMonitor()
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         if let src = runLoopSource { CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes) }
         CGEvent.tapEnable(tap: tap, enable: true)
@@ -43,6 +54,16 @@ class WindowMaximizer {
             name: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil
         )
+        if let frontmost = NSWorkspace.shared.frontmostApplication,
+           frontmost.processIdentifier != getpid() {
+            lastActiveApplication = frontmost
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(applicationDidActivate(_:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
 
         isRunning = true
         NSLog("[ORZ] Event tap started")
@@ -51,6 +72,8 @@ class WindowMaximizer {
     func stop() {
         pendingZoomWindow = nil
         pendingAction = nil
+        if let hotKeyMonitor { NSEvent.removeMonitor(hotKeyMonitor) }
+        hotKeyMonitor = nil
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         guard isRunning, let tap = eventTap else { return }
         CGEvent.tapEnable(tap: tap, enable: false)
@@ -107,17 +130,32 @@ class WindowMaximizer {
                 return Unmanaged.passRetained(event)
             }
 
-            let targetFrame = convertToAXCoordinates(screen.visibleFrame, screen: screen)
+            // NSScreen.visibleFrame already accounts for the menu bar and Dock.
+            // macOS's native tiled-window gutter is approximately 8 points.
+            let visibleFrame = settings?.useWindowMargins == true
+                ? screen.visibleFrame.insetBy(dx: 8, dy: 8)
+                : screen.visibleFrame
+            let targetFrame = convertToAXCoordinates(visibleFrame, screen: screen)
             let currentFrame = getElementFrame(window)
             let key = windowKey(for: window)
+            let alternateVisibleFrame = settings?.useWindowMargins == true
+                ? screen.visibleFrame
+                : screen.visibleFrame.insetBy(dx: 8, dy: 8)
+            let alternateTargetFrame = convertToAXCoordinates(alternateVisibleFrame, screen: screen)
 
-            if isWindowMaximized(currentFrame, targetFrame: targetFrame), let saved = savedFrames[key] {
+            let isAtZoomedFrame = isWindowMaximized(currentFrame, targetFrame: targetFrame)
+                || isWindowMaximized(currentFrame, targetFrame: alternateTargetFrame)
+            if isAtZoomedFrame, let saved = savedFrames[key] {
                 pendingAction = { [weak self] in
                     self?.setWindowFrame(window, frame: saved)
                     self?.savedFrames.removeValue(forKey: key)
+                    self?.lastZoomedWindow = nil
+                    self?.lastZoomedWindowKey = nil
                 }
             } else {
                 if let frame = currentFrame { savedFrames[key] = frame }
+                lastZoomedWindow = window
+                lastZoomedWindowKey = key
                 pendingAction = { [weak self] in
                     self?.setWindowFrame(window, frame: targetFrame)
                 }
@@ -153,6 +191,12 @@ class WindowMaximizer {
         }
     }
 
+    @objc private func applicationDidActivate(_ notification: Notification) {
+        guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              application.processIdentifier != getpid() else { return }
+        lastActiveApplication = application
+    }
+
     private func cancelPending() {
         pendingZoomWindow = nil
         pendingAction = nil
@@ -162,6 +206,54 @@ class WindowMaximizer {
         pendingAction?()
         pendingAction = nil
         pendingZoomWindow = nil
+    }
+
+    private func registerZoomHotKeyMonitor() {
+        hotKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let modifiers = event.modifierFlags.intersection([.shift, .control, .command, .option])
+            guard event.keyCode == 6, modifiers == [.control, .shift] else { return }
+            DispatchQueue.main.async { self?.zoomActiveWindow() }
+        }
+    }
+
+    func zoomActiveWindow() {
+        let app = lastActiveApplication.flatMap { $0.isTerminated ? nil : $0 }
+            ?? NSWorkspace.shared.frontmostApplication
+        guard let app, app.processIdentifier != getpid() else { return }
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        guard let window = focusedOrMainWindow(appElement),
+              let screen = screenForWindow(window) else { return }
+
+        let key = windowKey(for: window)
+        if let saved = savedFrames[key] {
+            setWindowFrame(window, frame: saved)
+            savedFrames.removeValue(forKey: key)
+            if lastZoomedWindowKey == key {
+                lastZoomedWindow = nil
+                lastZoomedWindowKey = nil
+            }
+            return
+        }
+
+        guard let currentFrame = getElementFrame(window) else { return }
+        let visibleFrame = settings?.useWindowMargins == true
+            ? screen.visibleFrame.insetBy(dx: 8, dy: 8)
+            : screen.visibleFrame
+        let targetFrame = convertToAXCoordinates(visibleFrame, screen: screen)
+        savedFrames[key] = currentFrame
+        lastZoomedWindow = window
+        lastZoomedWindowKey = key
+        setWindowFrame(window, frame: targetFrame)
+    }
+
+    func restorePreviousSize() {
+        guard let key = lastZoomedWindowKey,
+              let window = lastZoomedWindow,
+              let frame = savedFrames[key] else { return }
+        setWindowFrame(window, frame: frame)
+        savedFrames.removeValue(forKey: key)
+        lastZoomedWindow = nil
+        lastZoomedWindowKey = nil
     }
 
     // MARK: - AX Helpers

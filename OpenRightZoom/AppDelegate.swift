@@ -12,16 +12,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         settings.windowMaximizer = windowMaximizer
+        windowMaximizer.settings = settings
 
-        statusBarController = StatusBarController(settings: settings) { [weak self] in
+        statusBarController = StatusBarController(settings: settings, windowMaximizer: windowMaximizer) { [weak self] in
             self?.openSettings()
         }
 
-        if isAccessibilityGranted() {
+        let accessibilityGranted = isAccessibilityGranted()
+        if !settings.hasCompletedOnboarding || !accessibilityGranted {
+            openSettings()
+        }
+
+        if accessibilityGranted {
             if settings.isEnabled { windowMaximizer.start() }
         } else {
-            // Open settings and keep checking until permission is granted
-            openSettings()
+            // Keep checking after showing first-run guidance and the permission state.
             startAccessibilityMonitor()
         }
     }

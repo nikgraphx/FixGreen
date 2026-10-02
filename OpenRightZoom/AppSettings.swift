@@ -24,6 +24,18 @@ class AppSettings: ObservableObject {
         }
     }
 
+    @Published var useWindowMargins: Bool {
+        didSet {
+            UserDefaults.standard.set(useWindowMargins, forKey: "useWindowMargins")
+        }
+    }
+
+    @Published var hasCompletedOnboarding: Bool {
+        didSet {
+            UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
+        }
+    }
+
     weak var windowMaximizer: WindowMaximizer?
 
     init() {
@@ -34,5 +46,10 @@ class AppSettings: ObservableObject {
             self.isEnabled = defaults.bool(forKey: "isEnabled")
         }
         self.launchAtLogin = defaults.bool(forKey: "launchAtLogin")
+        // Match macOS Sequoia's default tiled-window spacing for new installs.
+        self.useWindowMargins = defaults.object(forKey: "useWindowMargins") == nil
+            ? true
+            : defaults.bool(forKey: "useWindowMargins")
+        self.hasCompletedOnboarding = defaults.bool(forKey: "hasCompletedOnboarding")
     }
 }

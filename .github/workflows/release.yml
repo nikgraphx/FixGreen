@@ -21,29 +21,29 @@ jobs:
             -project OpenRightZoom.xcodeproj \
             -scheme OpenRightZoom \
             -configuration Release \
-            -archivePath build/OpenRightZoom.xcarchive \
+            -archivePath 'build/Fix Green.xcarchive' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Export .app from archive
         run: |
-          cp -r build/OpenRightZoom.xcarchive/Products/Applications/OpenRightZoom.app \
-                build/OpenRightZoom.app
+          cp -R 'build/Fix Green.xcarchive/Products/Applications/Fix Green.app' \
+                'build/Fix Green.app'
 
       - name: Ad-hoc sign
         run: |
-          codesign --deep --force --sign - build/OpenRightZoom.app
+          codesign --deep --force --sign - 'build/Fix Green.app'
 
       - name: Zip .app
         run: |
           cd build
           ditto -c -k --sequesterRsrc --keepParent \
-            OpenRightZoom.app \
-            OpenRightZoom-${{ github.ref_name }}.zip
+            'Fix Green.app' \
+            'Fix-Green-${{ github.ref_name }}.zip'
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/OpenRightZoom-${{ github.ref_name }}.zip
+          files: build/Fix-Green-${{ github.ref_name }}.zip
           generate_release_notes: true

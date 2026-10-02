@@ -1,18 +1,22 @@
 import AppKit
 
-class StatusBarController {
+class StatusBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem
     private var settings: AppSettings
+    private var windowMaximizer: WindowMaximizer
     private var openSettings: () -> Void
+    private weak var restoreMenuItem: NSMenuItem?
 
-    init(settings: AppSettings, openSettings: @escaping () -> Void) {
+    init(settings: AppSettings, windowMaximizer: WindowMaximizer, openSettings: @escaping () -> Void) {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        self.statusItem = item
         self.settings = settings
+        self.windowMaximizer = windowMaximizer
         self.openSettings = openSettings
+        super.init()
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right", accessibilityDescription: "Open Right Zoom")
+        if let button = item.button {
+            button.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right", accessibilityDescription: "Fix Green")
         }
 
         buildMenu()
@@ -22,12 +26,22 @@ class StatusBarController {
         let menu = NSMenu()
 
         let toggleItem = NSMenuItem(
-            title: settings.isEnabled ? "Disable Open Right Zoom" : "Enable Open Right Zoom",
+            title: settings.isEnabled ? "Disable Fix Green" : "Enable Fix Green",
             action: #selector(toggleEnabled),
             keyEquivalent: ""
         )
         toggleItem.target = self
         menu.addItem(toggleItem)
+
+        let zoomItem = NSMenuItem(title: "Zoom Active Window  (⌃⇧Z)", action: #selector(zoomActiveWindow), keyEquivalent: "")
+        zoomItem.target = self
+        menu.addItem(zoomItem)
+
+        let restoreItem = NSMenuItem(title: "Restore Previous Size", action: #selector(restorePreviousSize), keyEquivalent: "")
+        restoreItem.target = self
+        restoreItem.isEnabled = windowMaximizer.canRestorePreviousSize
+        restoreMenuItem = restoreItem
+        menu.addItem(restoreItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -37,11 +51,16 @@ class StatusBarController {
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit Open Right Zoom", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit Fix Green", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
+        menu.delegate = self
         statusItem.menu = menu
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        restoreMenuItem?.isEnabled = windowMaximizer.canRestorePreviousSize
     }
 
     @objc private func toggleEnabled() {
@@ -51,6 +70,16 @@ class StatusBarController {
 
     @objc private func openSettingsWindow() {
         openSettings()
+    }
+
+    @objc private func zoomActiveWindow() {
+        windowMaximizer.zoomActiveWindow()
+        restoreMenuItem?.isEnabled = windowMaximizer.canRestorePreviousSize
+    }
+
+    @objc private func restorePreviousSize() {
+        windowMaximizer.restorePreviousSize()
+        restoreMenuItem?.isEnabled = windowMaximizer.canRestorePreviousSize
     }
 
     @objc private func quitApp() {
