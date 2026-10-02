@@ -24,6 +24,12 @@ class AppSettings: ObservableObject {
         }
     }
 
+    @Published var showMenuBarIcon: Bool {
+        didSet {
+            UserDefaults.standard.set(showMenuBarIcon, forKey: "showMenuBarIcon")
+        }
+    }
+
     @Published var useWindowMargins: Bool {
         didSet {
             UserDefaults.standard.set(useWindowMargins, forKey: "useWindowMargins")
@@ -46,6 +52,9 @@ class AppSettings: ObservableObject {
             self.isEnabled = defaults.bool(forKey: "isEnabled")
         }
         self.launchAtLogin = defaults.bool(forKey: "launchAtLogin")
+        self.showMenuBarIcon = defaults.object(forKey: "showMenuBarIcon") == nil
+            ? true
+            : defaults.bool(forKey: "showMenuBarIcon")
         // Match macOS Sequoia's default tiled-window spacing for new installs.
         self.useWindowMargins = defaults.object(forKey: "useWindowMargins") == nil
             ? true

@@ -14,6 +14,7 @@ Fix Green is a free, native macOS menu bar app that turns the green window butto
 - Hold a modifier while clicking the green button to keep the standard macOS fullscreen behavior.
 - Zoom the active window with **Control–Shift–Z**, or use **Zoom Active Window** and **Restore Previous Size** in the menu bar menu.
 - Choose whether Fix Green launches at login.
+- Hide the menu bar icon if desired. Reopen Fix Green from Spotlight or use **Control–Shift–,** to open Settings again.
 - Follow first-run guidance for the macOS Accessibility permission needed to control other apps' windows.
 
 ## Download and install
@@ -60,11 +61,11 @@ xcodebuild \
 
 ## Releases
 
-The GitHub Actions workflow builds a universal app, creates a ZIP, and publishes a GitHub Release when a matching version tag is pushed. Before releasing, update `CFBundleShortVersionString` and `CFBundleVersion` in `OpenRightZoom/Info.plist`, then push a tag such as `v1.0.1`:
+The GitHub Actions workflow builds a universal app, creates a ZIP, and publishes a GitHub Release when a matching version tag is pushed. Before releasing, update `CFBundleShortVersionString` and `CFBundleVersion` in `OpenRightZoom/Info.plist`, then push a tag such as `v1.0.2`:
 
 ```sh
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.0.2
+git push origin v1.0.2
 ```
 
 The automated build is ad-hoc signed so people can try it, but it is not notarized. Public distribution without the first-launch security warning requires a Developer ID signature and notarization with Apple. The repository does not contain signing credentials; see [Apple's notarization guide](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).

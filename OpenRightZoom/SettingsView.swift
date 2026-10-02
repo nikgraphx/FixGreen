@@ -38,6 +38,10 @@ struct SettingsView: View {
                 settingRow("Launch at Login", detail: "Start automatically when you sign in", symbol: "power.circle") {
                     Toggle("Launch at Login", isOn: $settings.launchAtLogin).labelsHidden().toggleStyle(.switch)
                 }
+                Divider().padding(.leading, 48)
+                settingRow("Show menu bar icon", detail: "Reopen Fix Green from Spotlight or press Control–Shift–, to reopen Settings", symbol: "menubar.rectangle") {
+                    Toggle("Show menu bar icon", isOn: $settings.showMenuBarIcon).labelsHidden().toggleStyle(.switch)
+                }
             }
             .padding(.horizontal, 14)
             .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -68,7 +72,7 @@ struct SettingsView: View {
             .padding(.horizontal, 2)
         }
         .padding(22)
-        .frame(width: 420, height: settings.hasCompletedOnboarding ? 370 : 560)
+        .frame(width: 420, height: settings.hasCompletedOnboarding ? 420 : 620)
         .onAppear {
             checkAccessibility()
             let statusTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
@@ -142,10 +146,6 @@ struct SettingsView: View {
     }
 
     private func openAccessibilityPreferences() {
-        // Ask macOS to display its native Accessibility permission prompt. This
-        // does not grant access; the user must still enable the app in Settings.
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             NSWorkspace.shared.open(url)

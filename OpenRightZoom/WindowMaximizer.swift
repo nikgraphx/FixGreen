@@ -99,33 +99,46 @@ class WindowMaximizer {
 
             let click = CGPoint(x: event.location.x, y: event.location.y)
 
+            var candidatePIDs: [pid_t] = []
+            var seenPIDs = Set<pid_t>()
+            func addCandidate(_ pid: pid_t) {
+                if pid > 0, pid != getpid(), seenPIDs.insert(pid).inserted {
+                    candidatePIDs.append(pid)
+                }
+            }
+
+            // Prefer the AX hit-test target, but also inspect the frontmost
+            // app. macOS's tiling popover can sit over the zoom button and
+            // become the hit-test result even though the click is on the
+            // underlying traffic light.
             let system = AXUIElementCreateSystemWide()
             var axEl: AXUIElement?
-            guard AXUIElementCopyElementAtPosition(system, Float(click.x), Float(click.y), &axEl) == .success,
-                  let el = axEl else {
+            if AXUIElementCopyElementAtPosition(system, Float(click.x), Float(click.y), &axEl) == .success,
+               let element = axEl {
+                var hitPID: pid_t = 0
+                AXUIElementGetPid(element, &hitPID)
+                addCandidate(hitPID)
+            }
+            if let frontmost = NSWorkspace.shared.frontmostApplication { addCandidate(frontmost.processIdentifier) }
+            if let lastActiveApplication { addCandidate(lastActiveApplication.processIdentifier) }
+
+            var targetWindow: AXUIElement?
+            for pid in candidatePIDs {
+                let appElement = AXUIElementCreateApplication(pid)
+                guard let window = focusedOrMainWindow(appElement) else { continue }
+                var zoomRef: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(window, kAXZoomButtonAttribute as CFString, &zoomRef) == .success,
+                      let zoomRef,
+                      let buttonFrame = getElementFrame(zoomRef as! AXUIElement),
+                      buttonFrame.insetBy(dx: -6, dy: -6).contains(click) else { continue }
+                targetWindow = window
+                break
+            }
+
+            guard let window = targetWindow else {
                 cancelPending()
                 return Unmanaged.passRetained(event)
             }
-
-            var pid: pid_t = 0
-            AXUIElementGetPid(el, &pid)
-            let appElement = AXUIElementCreateApplication(pid)
-
-            guard let window = focusedOrMainWindow(appElement) else {
-                cancelPending()
-                return Unmanaged.passRetained(event)
-            }
-
-            var zoomRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(window, kAXZoomButtonAttribute as CFString, &zoomRef) == .success,
-                  let zoomBtn = zoomRef,
-                  let btnFrame = getElementFrame(zoomBtn as! AXUIElement),
-                  btnFrame.insetBy(dx: -6, dy: -6).contains(click) else {
-                cancelPending()
-                return Unmanaged.passRetained(event)
-            }
-
-            let zoomButton = zoomBtn as! AXUIElement
 
             guard let screen = screenForWindow(window) else {
                 cancelPending()
@@ -149,10 +162,6 @@ class WindowMaximizer {
                 || isWindowMaximized(currentFrame, targetFrame: alternateTargetFrame)
             if isAtZoomedFrame, let saved = savedFrames[key] {
                 pendingAction = { [weak self] in
-                    // Invoke the native zoom control as well as restoring the
-                    // saved frame. This dismisses macOS's green-button tiling
-                    // popover and keeps the native zoom state in sync.
-                    AXUIElementPerformAction(zoomButton, kAXPressAction as CFString)
                     self?.setWindowFrame(window, frame: saved)
                     self?.savedFrames.removeValue(forKey: key)
                     self?.lastZoomedWindow = nil
@@ -163,10 +172,6 @@ class WindowMaximizer {
                 lastZoomedWindow = window
                 lastZoomedWindowKey = key
                 pendingAction = { [weak self] in
-                    // The actual pointer remains over the green button after
-                    // resizing, so the native hover menu can stay open. Press
-                    // its AX button to dismiss it before applying our frame.
-                    AXUIElementPerformAction(zoomButton, kAXPressAction as CFString)
                     self?.setWindowFrame(window, frame: targetFrame)
                 }
             }

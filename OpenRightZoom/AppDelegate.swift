@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let settings = AppSettings()
     let windowMaximizer = WindowMaximizer()
     private var accessibilityTimer: Timer?
+    private var settingsHotKeyMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -17,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarController = StatusBarController(settings: settings, windowMaximizer: windowMaximizer) { [weak self] in
             self?.openSettings()
         }
+        registerSettingsHotKey()
 
         let accessibilityGranted = isAccessibilityGranted()
         if !settings.hasCompletedOnboarding || !accessibilityGranted {
@@ -56,5 +58,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         settingsWindowController?.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openSettings()
+        return true
+    }
+
+    private func registerSettingsHotKey() {
+        settingsHotKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let modifiers = event.modifierFlags.intersection([.control, .shift, .command, .option])
+            guard event.keyCode == 43, modifiers == [.control, .shift] else { return }
+            DispatchQueue.main.async { self?.openSettings() }
+        }
     }
 }

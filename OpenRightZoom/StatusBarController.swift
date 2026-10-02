@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 class StatusBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem
@@ -6,6 +7,7 @@ class StatusBarController: NSObject, NSMenuDelegate {
     private var windowMaximizer: WindowMaximizer
     private var openSettings: () -> Void
     private weak var restoreMenuItem: NSMenuItem?
+    private var iconVisibilityObserver: AnyCancellable?
 
     init(settings: AppSettings, windowMaximizer: WindowMaximizer, openSettings: @escaping () -> Void) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -18,6 +20,10 @@ class StatusBarController: NSObject, NSMenuDelegate {
         if let button = item.button {
             button.image = NSImage(systemSymbolName: "arrow.up.left.and.arrow.down.right", accessibilityDescription: "Fix Green")
         }
+        item.isVisible = settings.showMenuBarIcon
+        iconVisibilityObserver = settings.$showMenuBarIcon
+            .receive(on: DispatchQueue.main)
+            .sink { [weak item] isVisible in item?.isVisible = isVisible }
 
         buildMenu()
     }
