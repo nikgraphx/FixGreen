@@ -1,5 +1,6 @@
 import SwiftUI
 import ApplicationServices
+import Combine
 
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
@@ -12,11 +13,11 @@ struct SettingsView: View {
                 onboardingCard
             }
             HStack(spacing: 12) {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 23, weight: .semibold))
-                    .foregroundStyle(.white)
+                Image("FixGreenMark")
+                    .resizable()
+                    .scaledToFill()
                     .frame(width: 44, height: 44)
-                    .background(.blue.gradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Fix Green").font(.title3.weight(.semibold))
                     Text("Window behavior, your way")
@@ -47,7 +48,16 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(hasAccessibility ? "Accessibility access granted" : "Accessibility access required")
                         .font(.callout.weight(.medium))
-                    if !hasAccessibility { Text("Required to control other apps' windows").font(.caption).foregroundStyle(.secondary) }
+                    if !hasAccessibility {
+                        Text("Add this copy in System Settings → Privacy & Security → Accessibility, then turn it on.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(Bundle.main.bundleURL.path)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Spacer(minLength: 4)
                 if !hasAccessibility {
@@ -58,12 +68,17 @@ struct SettingsView: View {
             .padding(.horizontal, 2)
         }
         .padding(22)
-        .frame(width: 420, height: settings.hasCompletedOnboarding ? 330 : 560)
+        .frame(width: 420, height: settings.hasCompletedOnboarding ? 370 : 560)
         .onAppear {
             checkAccessibility()
-            timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { _ in
-                checkAccessibility()
+            let statusTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
+                DispatchQueue.main.async { checkAccessibility() }
             }
+            RunLoop.main.add(statusTimer, forMode: .common)
+            timer = statusTimer
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            checkAccessibility()
         }
         .onDisappear {
             timer?.invalidate()
@@ -79,7 +94,7 @@ struct SettingsView: View {
                 Text("Welcome to Fix Green")
                     .font(.headline)
             }
-            Text("To resize other apps' windows, macOS needs to grant Fix Green Accessibility access. Open Privacy & Security → Accessibility, enable Fix Green, then return here. We’ll notice when access is ready. If it isn't listed, add the app with the + button.")
+            Text("To resize other apps' windows, Fix Green needs Accessibility access. Click below, then in System Settings use + to add this app and turn it on. The exact app location is shown in the settings window. Return here after granting access.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -123,12 +138,17 @@ struct SettingsView: View {
     }
 
     private func checkAccessibility() {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
-        hasAccessibility = AXIsProcessTrustedWithOptions(options)
+        hasAccessibility = AXIsProcessTrusted()
     }
 
     private func openAccessibilityPreferences() {
+        // Ask macOS to display its native Accessibility permission prompt. This
+        // does not grant access; the user must still enable the app in Settings.
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(options)
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-        NSWorkspace.shared.open(url)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            NSWorkspace.shared.open(url)
+        }
     }
 }

@@ -125,6 +125,8 @@ class WindowMaximizer {
                 return Unmanaged.passRetained(event)
             }
 
+            let zoomButton = zoomBtn as! AXUIElement
+
             guard let screen = screenForWindow(window) else {
                 cancelPending()
                 return Unmanaged.passRetained(event)
@@ -147,6 +149,10 @@ class WindowMaximizer {
                 || isWindowMaximized(currentFrame, targetFrame: alternateTargetFrame)
             if isAtZoomedFrame, let saved = savedFrames[key] {
                 pendingAction = { [weak self] in
+                    // Invoke the native zoom control as well as restoring the
+                    // saved frame. This dismisses macOS's green-button tiling
+                    // popover and keeps the native zoom state in sync.
+                    AXUIElementPerformAction(zoomButton, kAXPressAction as CFString)
                     self?.setWindowFrame(window, frame: saved)
                     self?.savedFrames.removeValue(forKey: key)
                     self?.lastZoomedWindow = nil
@@ -157,6 +163,10 @@ class WindowMaximizer {
                 lastZoomedWindow = window
                 lastZoomedWindowKey = key
                 pendingAction = { [weak self] in
+                    // The actual pointer remains over the green button after
+                    // resizing, so the native hover menu can stay open. Press
+                    // its AX button to dismiss it before applying our frame.
+                    AXUIElementPerformAction(zoomButton, kAXPressAction as CFString)
                     self?.setWindowFrame(window, frame: targetFrame)
                 }
             }

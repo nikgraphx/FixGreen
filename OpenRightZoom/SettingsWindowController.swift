@@ -11,13 +11,13 @@ class SettingsWindowController: NSWindowController {
         let window = NSWindow(contentViewController: hostingController)
         window.title = "Fix Green Settings"
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.setContentSize(NSSize(width: 420, height: settings.hasCompletedOnboarding ? 330 : 560))
+        window.setContentSize(NSSize(width: 420, height: settings.hasCompletedOnboarding ? 370 : 560))
         window.center()
         super.init(window: window)
 
         onboardingObserver = settings.$hasCompletedOnboarding.dropFirst().sink { [weak self] completed in
             DispatchQueue.main.async {
-                self?.window?.setContentSize(NSSize(width: 420, height: completed ? 330 : 560))
+                self?.window?.setContentSize(NSSize(width: 420, height: completed ? 370 : 560))
             }
         }
     }
