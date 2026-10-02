@@ -1,9 +1,5 @@
-# Security policy
+# Security
 
-Please do not post suspected vulnerabilities in a public issue.
+Please don’t post security problems in a public issue. Email **nikgraphx@gmail.com** with the subject **[Fix Green security] Private report**. Include the app and macOS versions and steps to reproduce; leave out personal window titles or other private information.
 
-Use GitHub's **Report a vulnerability** option on the repository's Security → Advisories page to contact the maintainers privately. Repository maintainers should enable private vulnerability reporting in the repository's Security settings.
-
-If private reporting is unavailable, email [nikgraphx@gmail.com](mailto:nikgraphx@gmail.com?subject=%5BFix%20Green%20security%5D%20Private%20report). Please include steps to reproduce, the affected app version and macOS version, and any relevant logs. Avoid including personal window titles or other sensitive data unless needed to demonstrate the issue.
-
-We aim to acknowledge reports within seven days and will coordinate a fix and disclosure with the reporter.
+We’ll acknowledge the report and work with you on a fix. GitHub private vulnerability reporting can also be enabled in the repository's Security settings.

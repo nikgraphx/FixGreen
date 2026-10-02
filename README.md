@@ -1,46 +1,46 @@
 # Fix Green
 
-Fix Green is a small macOS utility for people who want the green window button to zoom a window into the usable screen area instead of sending it to a separate full-screen space. Click the green button again to restore the window.
+Fix Green changes what happens when you click a window's green button: it zooms the window to the usable part of your screen, without moving it to a separate full-screen space. Click again to put it back.
 
-The project started as a fork of [Open Right Zoom](https://github.com/Michele0303/open-right-zoom) by Michele0303. Fix Green keeps that original idea and adds configurable screen margins, settings and first-run Accessibility guidance, menu-bar controls, and keyboard shortcuts.
+This started as a fork of [Open Right Zoom](https://github.com/Michele0303/open-right-zoom) by Michele0303. It keeps the original idea and adds a few options for how it behaves.
+
+## Download Fix Green
+
+> **[Download the latest version from GitHub Releases](https://github.com/nikgraphx/FixGreen/releases/latest)**
+>
+> On the release page, open **Assets** and choose **Fix-Green-v*.zip**. It contains the app. The separate “Source code” downloads are just the project files.
+
+Unzip it and move **Fix Green.app** to **Applications** before opening it.
 
 <p align="center">
   <img src="OpenRightZoom/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png" width="180" alt="Fix Green app icon">
 </p>
 
-## What it does
+## A few things you can do
 
-- Click the green window button to fill the display's usable area, then click again to restore the previous size.
-- Keep the Dock and menu bar clear. An optional margin leaves a small gap around zoomed windows and is on by default for new installs.
-- Hold a modifier while clicking the green button to use the normal macOS full-screen action.
-- Zoom the active window with **Control–Shift–Z**. The menu bar menu also has zoom and restore commands.
-- Choose whether Fix Green starts at login or shows its menu bar icon. If the icon is hidden, open Fix Green from Spotlight or press **Control–Shift–,** to return to Settings.
-- Check GitHub for updates from the menu bar menu. Fix Green does not check in the background.
+- Leave a little space around zoomed windows, or turn margins off.
+- Click the green button again to restore the window's old size.
+- Hold a modifier key to get the usual macOS full-screen behavior.
+- Press **Control–Shift–Z** to zoom the active window.
+- Set Fix Green to open at login. The menu bar icon is optional; open Fix Green from Spotlight to get back to Settings if you hide it.
+- Choose **Check for Updates** in the menu when you want to see if a new version is out.
 
-## Download
+## Accessibility permission
 
-Download the latest **Fix-Green-v*.zip** from [GitHub Releases](https://github.com/nikgraphx/FixGreen/releases/latest). Open the ZIP, then move **Fix Green.app** into **Applications** before launching it.
+After opening the app, add that copy to **System Settings → Privacy & Security → Accessibility** and turn it on. Fix Green needs this permission to resize windows in other apps; macOS requires you to grant it yourself.
 
-### Accessibility permission
+If window resizing stops after you install an update, remove Fix Green from the Accessibility list and add the updated app again. macOS can remember permission for a particular copy of an ad-hoc-signed app.
 
-Fix Green needs Accessibility access to detect the green button and move or resize other apps' windows. On first launch, open the app's Settings, choose **Open Accessibility Settings**, then use the **+** button in **System Settings → Privacy & Security → Accessibility** to add `/Applications/Fix Green.app` and turn it on. macOS does not let an app grant this permission to itself.
-
-If window control stops working after an update, remove Fix Green from the Accessibility list and add the updated copy again. macOS can associate this permission with the exact app build, especially while the app is distributed with an ad-hoc signature.
-
-GitHub builds are ad-hoc signed and are not notarized. macOS may show a first-launch security warning. Move the app to Applications, then Control-click it and choose **Open** if macOS blocks the first launch.
-
-## Privacy
-
-Fix Green runs locally and has no account, analytics, or background update check. Accessibility access allows it to detect the green window button and read or change a target window's position and size. Its optional global shortcuts use macOS event monitors. When you choose **Check for Updates**, the app makes a request to GitHub's public release API; it does not send window titles, window contents, or other app data.
+The download is not notarized by Apple, so macOS may show a warning the first time. If it blocks the app, Control-click **Fix Green.app** in Applications and choose **Open**.
 
 ## Requirements
 
 - macOS 13 Ventura or later
 - Apple Silicon or Intel Mac
 
-## Build from source
+## Build it yourself
 
-Install Xcode, then clone and open the project:
+Install Xcode, then:
 
 ```sh
 git clone https://github.com/nikgraphx/FixGreen.git
@@ -48,7 +48,7 @@ cd FixGreen
 open OpenRightZoom.xcodeproj
 ```
 
-Select the `OpenRightZoom` scheme in Xcode. To build a universal Release app from Terminal:
+Choose the `OpenRightZoom` scheme in Xcode. To build a universal Release app from Terminal:
 
 ```sh
 xcodebuild \
@@ -63,12 +63,12 @@ xcodebuild \
 
 ## Releases
 
-Each version has a matching entry in [CHANGELOG.md](CHANGELOG.md). Pushing a version tag such as `v1.0.3` starts the macOS build workflow, which compiles an Apple Silicon and Intel app and attaches a ZIP containing **Fix Green.app** to the GitHub Release. The workflow first uploads the ZIP to a draft release, then publishes it after the asset is ready.
+Each release has a short entry in [CHANGELOG.md](CHANGELOG.md). Pushing a version tag starts a GitHub Actions build that compiles the app for Apple Silicon and Intel, puts it in a ZIP, and attaches the ZIP to the release.
 
-## License and origin
+## Where it came from
 
-Fix Green is based on [Open Right Zoom](https://github.com/Michele0303/open-right-zoom). The upstream MIT license and its copyright notice are retained in [LICENSE](LICENSE); keep that notice with copies and distributions. The README credits the original project and describes Fix Green's additions.
+Fix Green is based on [Open Right Zoom](https://github.com/Michele0303/open-right-zoom). The original MIT license and copyright notice are kept in [LICENSE](LICENSE); please keep them with copies of the software. Fix Green's changes are available in this repository under the MIT license as well.
 
-## Security and support
+## Help and security reports
 
-Please report security issues privately using the instructions in [SECURITY.md](SECURITY.md). For general help, email [nikgraphx@gmail.com](mailto:nikgraphx@gmail.com?subject=Fix%20Green%20support).
+For help, email [nikgraphx@gmail.com](mailto:nikgraphx@gmail.com?subject=Fix%20Green%20help). Please report security issues privately; the instructions are in [SECURITY.md](SECURITY.md).
