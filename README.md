@@ -4,6 +4,10 @@ Fix Green changes what happens when you click a window's green button: it zooms 
 
 This started as a fork of [Open Right Zoom](https://github.com/Michele0303/open-right-zoom) by Michele0303. It keeps the original idea and adds a few options for how it behaves.
 
+<p align="center">
+  <img src="assets/fix-green-settings.png" width="100%" alt="Fix Green settings window on macOS">
+</p>
+
 ## Download Fix Green
 
 > **[Download the latest version from GitHub Releases](https://github.com/nikgraphx/FixGreen/releases/latest)**
@@ -11,10 +15,6 @@ This started as a fork of [Open Right Zoom](https://github.com/Michele0303/open-
 > On the release page, open **Assets** and choose **Fix-Green-v*.zip**. It contains the app. The separate “Source code” downloads are just the project files.
 
 Unzip it and move **Fix Green.app** to **Applications** before opening it.
-
-<p align="center">
-  <img src="OpenRightZoom/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png" width="180" alt="Fix Green app icon">
-</p>
 
 ## A few things you can do
 
