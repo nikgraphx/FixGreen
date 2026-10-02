@@ -1,0 +1,8 @@
+# Xcode per-user state and local build products
+**/xcuserdata/
+DerivedData/
+build/
+*.xcuserstate
+
+# macOS Finder metadata
+.DS_Store

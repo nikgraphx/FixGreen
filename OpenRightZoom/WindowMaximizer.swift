@@ -145,18 +145,10 @@ class WindowMaximizer {
                 return Unmanaged.passRetained(event)
             }
 
-            // NSScreen.visibleFrame already accounts for the menu bar and Dock.
-            // macOS's native tiled-window gutter is approximately 8 points.
-            let visibleFrame = settings?.useWindowMargins == true
-                ? screen.visibleFrame.insetBy(dx: 8, dy: 8)
-                : screen.visibleFrame
-            let targetFrame = convertToAXCoordinates(visibleFrame, screen: screen)
+            let targetFrame = zoomFrame(on: screen)
             let currentFrame = getElementFrame(window)
             let key = windowKey(for: window)
-            let alternateVisibleFrame = settings?.useWindowMargins == true
-                ? screen.visibleFrame
-                : screen.visibleFrame.insetBy(dx: 8, dy: 8)
-            let alternateTargetFrame = convertToAXCoordinates(alternateVisibleFrame, screen: screen)
+            let alternateTargetFrame = convertToAXCoordinates(screen.visibleFrame.intersection(screen.frame))
 
             let isAtZoomedFrame = isWindowMaximized(currentFrame, targetFrame: targetFrame)
                 || isWindowMaximized(currentFrame, targetFrame: alternateTargetFrame)
@@ -251,10 +243,7 @@ class WindowMaximizer {
         }
 
         guard let currentFrame = getElementFrame(window) else { return }
-        let visibleFrame = settings?.useWindowMargins == true
-            ? screen.visibleFrame.insetBy(dx: 8, dy: 8)
-            : screen.visibleFrame
-        let targetFrame = convertToAXCoordinates(visibleFrame, screen: screen)
+        let targetFrame = zoomFrame(on: screen)
         savedFrames[key] = currentFrame
         lastZoomedWindow = window
         lastZoomedWindowKey = key
@@ -305,7 +294,7 @@ class WindowMaximizer {
     private func screenForWindow(_ window: AXUIElement) -> NSScreen? {
         guard let frame = getElementFrame(window) else { return NSScreen.main }
         guard let mainScreen = NSScreen.screens.first else { return NSScreen.main }
-        let nsCenter = CGPoint(x: frame.midX, y: mainScreen.frame.height - frame.midY)
+        let nsCenter = CGPoint(x: frame.midX, y: mainScreen.frame.maxY - frame.midY)
         for screen in NSScreen.screens where screen.frame.contains(nsCenter) { return screen }
         return NSScreen.main
     }
@@ -322,23 +311,73 @@ class WindowMaximizer {
             AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanFalse)
         }
 
-        var pos = frame.origin
-        var size = frame.size
+        // Resizing can make some apps reposition the window after AXPosition
+        // has been applied. Re-read the actual AX frame and correct any drift,
+        // especially along the bottom edge when the Dock is on a side.
+        for _ in 0..<3 {
+            var pos = frame.origin
+            var size = frame.size
+            if let value = AXValueCreate(.cgSize, &size) {
+                AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, value)
+            }
+            if let value = AXValueCreate(.cgPoint, &pos) {
+                AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, value)
+            }
+            if let value = AXValueCreate(.cgSize, &size) {
+                AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, value)
+            }
 
-        // size → position → size to handle multi-display clamping
-        if let v = AXValueCreate(.cgSize, &size) { AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, v) }
-        if let v = AXValueCreate(.cgPoint, &pos) { AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, v) }
-        if let v = AXValueCreate(.cgSize, &size) { AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, v) }
+            guard let actual = getElementFrame(window) else { break }
+            let isAligned = abs(actual.minX - frame.minX) < 2
+                && abs(actual.minY - frame.minY) < 2
+                && abs(actual.width - frame.width) < 2
+                && abs(actual.height - frame.height) < 2
+            if isAligned { break }
+
+            // The final size write above may have shifted the origin. Apply
+            // the requested position once more before the next verification.
+            var correctedPosition = frame.origin
+            if let value = AXValueCreate(.cgPoint, &correctedPosition) {
+                AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, value)
+            }
+        }
 
         if hadEnhancedUI {
             AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
         }
     }
 
-    private func convertToAXCoordinates(_ frame: CGRect, screen: NSScreen) -> CGRect {
+    private func convertToAXCoordinates(_ frame: CGRect) -> CGRect {
         guard let mainScreen = NSScreen.screens.first else { return frame }
-        let axY = mainScreen.frame.height - frame.maxY
+        // AX uses a top-left global origin; AppKit uses a bottom-left origin.
+        // The primary display's maxY is the shared vertical reference even
+        // when the target display sits above or below it.
+        let axY = mainScreen.frame.maxY - frame.maxY
         return CGRect(x: frame.origin.x, y: axY, width: frame.width, height: frame.height)
+    }
+
+    private func zoomFrame(on screen: NSScreen) -> CGRect {
+        // visibleFrame is queried at the time of the action, so a Dock move,
+        // auto-hide change, or menu-bar change is respected immediately.
+        let usableFrame = screen.visibleFrame.intersection(screen.frame)
+        guard settings?.useWindowMargins == true else {
+            return convertToAXCoordinates(usableFrame)
+        }
+
+        let sideMargin: CGFloat = 8
+        // With the Dock on a side (or auto-hidden), visibleFrame reaches the
+        // physical bottom edge. Window shadows can consume the regular
+        // 8-point gutter there, so reserve another 8 points for a visible gap.
+        // When a bottom Dock already reserves space, keep the normal gutter.
+        let bottomDockAlreadyReservesSpace = usableFrame.minY > screen.frame.minY + 1
+        let bottomMargin: CGFloat = bottomDockAlreadyReservesSpace ? 8 : 16
+        let targetInAppKit = CGRect(
+            x: usableFrame.minX + sideMargin,
+            y: usableFrame.minY + bottomMargin,
+            width: max(0, usableFrame.width - sideMargin * 2),
+            height: max(0, usableFrame.height - sideMargin - bottomMargin)
+        )
+        return convertToAXCoordinates(targetInAppKit)
     }
 
     private func isWindowMaximized(_ currentFrame: CGRect?, targetFrame: CGRect) -> Bool {

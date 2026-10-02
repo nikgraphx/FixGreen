@@ -52,6 +52,10 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(hasAccessibility ? "Accessibility access granted" : "Accessibility access required")
                         .font(.callout.weight(.medium))
+                    Text("If window control stops after an update, remove Fix Green from the Accessibility list and add the updated copy again.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     if !hasAccessibility {
                         Text("Add this copy in System Settings → Privacy & Security → Accessibility, then turn it on.")
                             .font(.caption)
@@ -72,7 +76,7 @@ struct SettingsView: View {
             .padding(.horizontal, 2)
         }
         .padding(22)
-        .frame(width: 420, height: settings.hasCompletedOnboarding ? 420 : 620)
+        .frame(width: 420, height: settings.hasCompletedOnboarding ? 450 : 640)
         .onAppear {
             checkAccessibility()
             let statusTimer = Timer(timeInterval: 1.0, repeats: true) { _ in
