@@ -18,9 +18,9 @@ Unzip it and move **Fix Green.app** to **Applications** before opening it.
 
 ## First launch and how to use it
 
-1. Open **Fix Green.app** from Applications. If macOS blocks it, Control-click the app and choose **Open**.
+1. Open **Fix Green.app** from Applications. If macOS blocks it, try opening it once, then go to **System Settings → Privacy & Security**. Under **Security**, click **Open Anyway** and confirm.
 2. In **System Settings → Privacy & Security → Accessibility**, turn on **Fix Green**. If it is not listed, add **Fix Green.app** from Applications with the **+** button.
-3. Open a window and click its green button. Fix Green zooms it to the usable area of your screen; click the green button again to restore its previous size.
+3. Click a window's green button to zoom it to the usable area of your screen. Click again to restore its previous size.
 
 To use macOS's regular full-screen mode for a window, hold **Command** while clicking its green button.
 
@@ -38,8 +38,6 @@ To use macOS's regular full-screen mode for a window, hold **Command** while cli
 After opening the app, add that copy to **System Settings → Privacy & Security → Accessibility** and turn it on. Fix Green needs this permission to resize windows in other apps; macOS requires you to grant it yourself.
 
 If window resizing stops after you install an update, remove Fix Green from the Accessibility list and add the updated app again. macOS can remember permission for a particular copy of an ad-hoc-signed app.
-
-The download is not notarized by Apple, so macOS may show a warning the first time. If it blocks the app, Control-click **Fix Green.app** in Applications and choose **Open**.
 
 ## Requirements
 
