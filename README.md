@@ -16,6 +16,14 @@ This started as a fork of [Open Right Zoom](https://github.com/Michele0303/open-
 
 Unzip it and move **Fix Green.app** to **Applications** before opening it.
 
+## First launch and how to use it
+
+1. Open **Fix Green.app** from Applications. If macOS blocks it, Control-click the app and choose **Open**.
+2. In **System Settings → Privacy & Security → Accessibility**, turn on **Fix Green**. If it is not listed, add **Fix Green.app** from Applications with the **+** button.
+3. Open a window and click its green button. Fix Green zooms it to the usable area of your screen; click the green button again to restore its previous size.
+
+To use macOS's regular full-screen mode for a window, hold **Command** while clicking its green button.
+
 ## A few things you can do
 
 - Leave a little space around zoomed windows, or turn margins off.
