@@ -79,4 +79,4 @@ Fix Green is based on [Open Right Zoom](https://github.com/Michele0303/open-righ
 
 ## Help and security reports
 
-For help, email [nikgraphx@gmail.com](mailto:nikgraphx@gmail.com?subject=Fix%20Green%20help). Please report security issues privately; the instructions are in [SECURITY.md](SECURITY.md).
+For help, email [nikgraphx@gmail.com](mailto:nikgraphx@gmail.com?subject=Fix%20Green%20help), or find me on [X](https://x.com/nikgraphx). Please report security issues privately; the instructions are in [SECURITY.md](SECURITY.md).
